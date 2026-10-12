@@ -60,11 +60,22 @@ When motion is detected in your monitored space, SPIA instantly triggers automat
 
 ## Installation
 
-### Pre-built DMG Installer
+### Method 1: Homebrew (Recommended)
+
+```bash
+brew install --cask qn34uc59t/tap/spia
+```
+
+Quarantine flags are automatically bypassed during installation. Update with:
+```bash
+brew upgrade spia
+```
+
+### Method 2: Pre-built DMG Installer
 
 1. Download **`SPIA-v0.1.4.dmg`** from [GitHub Releases](https://github.com/qn34uc59t/spia/releases).
 2. Open the disk image.
-3. Drag **SPIA.app** to your `/Applications` folder, or run **Install SPIA.command** directly from the mounted volume.
+3. Drag **SPIA.app** to your `/Applications` folder, or double-click **Install SPIA.command**.
 4. Launch SPIA from Spotlight or Launchpad.
 
 ---
