@@ -1,0 +1,13 @@
+#!/bin/bash
+export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+BUNDLE_ENGINE="$SCRIPT_DIR/../Resources/binaries/spia-engine-dist/spia-engine"
+DEV_ENGINE="$SCRIPT_DIR/spia-engine-dist/spia-engine"
+if [ -x "$BUNDLE_ENGINE" ]; then
+    exec "$BUNDLE_ENGINE" "$@"
+elif [ -x "$DEV_ENGINE" ]; then
+    exec "$DEV_ENGINE" "$@"
+else
+    echo '{"type":"error","msg":"spia-engine binary not found"}' >&1
+    exit 1
+fi

@@ -1,0 +1,6 @@
+fastapi>=0.111.0
+uvicorn>=0.29.0
+opencv-python>=4.9.0
+numpy>=1.26.0
+requests>=2.31.0
+pyobjc-framework-AVFoundation>=10.3
