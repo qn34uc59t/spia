@@ -85,7 +85,7 @@ export default function App() {
 
   // Settings
   const [cameraIndex, setCameraIndex] = useState(0);
-  const [sensitivity, setSensitivity] = useState(2);
+  const [sensitivity, setSensitivity] = useState(1);
   const [cooldown, setCooldown] = useState(6);
   const [savePath, setSavePath] = useState("");
   const [tgToken, setTgToken] = useState("");
@@ -314,6 +314,9 @@ export default function App() {
         // Preview is off by default until user presses "show preview" or "start surveillance" starts the engine
       }
       if (s.armCountdown !== undefined) setArmCountdown(s.armCountdown);
+      if (s.sensitivity !== undefined) setSensitivity(s.sensitivity);
+      if (s.cooldown !== undefined) setCooldown(s.cooldown);
+      if (s.cameraIndex !== undefined) setCameraIndex(s.cameraIndex);
       if (s.zoneMask) setZoneMask(s.zoneMask);
       if (s.autoCleanup !== undefined) setAutoCleanup(s.autoCleanup);
       if (s.preventSleep !== undefined) {
@@ -935,7 +938,11 @@ export default function App() {
                   <select
                     className="dropdown"
                     value={cameraIndex}
-                    onChange={e => setCameraIndex(Number(e.target.value))}
+                    onChange={e => {
+                      const v = Number(e.target.value);
+                      setCameraIndex(v);
+                      const s = loadSettings(); s.cameraIndex = v; saveSettings(s);
+                    }}
                   >
                     {cameras.map(c => (
                       <option key={c.index} value={c.index}>{c.name}</option>
@@ -951,7 +958,11 @@ export default function App() {
                     type="range"
                     min="5" max="15" step="1"
                     value={cooldown}
-                    onChange={e => setCooldown(Number(e.target.value))}
+                    onChange={e => {
+                      const v = Number(e.target.value);
+                      setCooldown(v);
+                      const s = loadSettings(); s.cooldown = v; saveSettings(s);
+                    }}
                   />
                   <span className="val-text">{cooldown} sec</span>
                 </div>
@@ -964,7 +975,11 @@ export default function App() {
                     type="range"
                     min="0" max="2" step="1"
                     value={sensitivity}
-                    onChange={e => setSensitivity(Number(e.target.value))}
+                    onChange={e => {
+                      const v = Number(e.target.value);
+                      setSensitivity(v);
+                      const s = loadSettings(); s.sensitivity = v; saveSettings(s);
+                    }}
                   />
                   <span className="val-text">{sensLabel}</span>
                 </div>
