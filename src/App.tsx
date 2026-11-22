@@ -344,7 +344,7 @@ export default function App() {
             zone_mask: s.zoneMask
           });
 
-          await startEngine({ trigger_immediate: true, continuous: true });
+          await startEngine();
           setRunning(true);
           setActiveTab("monitor");
           invoke("set_tray_active", { active: true }).catch(console.error);

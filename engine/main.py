@@ -289,8 +289,6 @@ def handle_command(cmd_str):
             log("Configuration updated")
             
         elif action == "start":
-            trigger_immediate = cmd.get("trigger_immediate", False)
-            continuous = cmd.get("continuous", False)
             with state.lock:
                 state.running = True
                 do_cleanup = state.auto_cleanup
@@ -298,10 +296,6 @@ def handle_command(cmd_str):
             if camera_thread is None or not camera_thread.is_alive():
                 camera_thread = threading.Thread(target=motion_loop, daemon=True)
                 camera_thread.start()
-
-            if trigger_immediate:
-                frame_recorder.trigger(continuous=continuous, force=True)
-                log(f"Started recording immediately (continuous={continuous})")
                 
             # Clean up events older than 7 days
             if do_cleanup:

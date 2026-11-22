@@ -75,8 +75,8 @@ export async function configure(cfg: Partial<Config>): Promise<void> {
   await sendCmd("configure", { config: cfg });
 }
 
-export async function startEngine(options?: { trigger_immediate?: boolean; continuous?: boolean }): Promise<void> {
-  await sendCmd("start", options || {});
+export async function startEngine(): Promise<void> {
+  await sendCmd("start");
 }
 
 export async function stopEngine(): Promise<void> {

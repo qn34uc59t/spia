@@ -45,12 +45,9 @@ class FrameRecorder:
         self._pre_buffer: deque[np.ndarray] = deque(maxlen=pre_count)
 
         self._recording = False
-        self._continuous = False
         self._post_frames: list[np.ndarray] = []
         self._post_target = int(fps * post_seconds)
-        self._max_continuous_frames = int(fps * 600)  # 10 min chunk limit
         self._active_export_thread: Thread | None = None
-
         self._last_export_time: float = 0.0
         self._on_export_done = None  # callback(path: str)
 
@@ -87,30 +84,23 @@ class FrameRecorder:
         """Feed every frame from the capture thread."""
         if self._recording:
             self._post_frames.append(frame.copy())
-            if not self._continuous and len(self._post_frames) >= self._post_target:
+            if len(self._post_frames) >= self._post_target:
                 self._finalize()
-            elif self._continuous and len(self._post_frames) >= self._max_continuous_frames:
-                self._finalize()
-                self._recording = True
-                self._continuous = True
         else:
             self._pre_buffer.append(frame.copy())
 
-    def trigger(self, continuous: bool = False, force: bool = False):
-        """Called when motion is detected or manual start requested. Starts recording.
+    def trigger(self):
+        """Called when motion is detected. Starts recording.
 
-        Returns True if recording started, False if on cooldown.
+        Returns True if recording started, False if on cooldown or already recording.
         """
         now = time.monotonic()
-        if not force and (now - self._last_export_time < self._cooldown_seconds):
+        if now - self._last_export_time < self._cooldown_seconds:
             return False
         if self._recording:
-            if continuous:
-                self._continuous = True
             return False
 
         self._recording = True
-        self._continuous = continuous
         self._post_frames = []
         return True
 
@@ -119,11 +109,9 @@ class FrameRecorder:
         self._pre_buffer.clear()
         self._post_frames = []
         self._recording = False
-        self._continuous = False
-
     def stop_and_flush(self, wait_timeout: float = 30.0):
         """Finalize any in-progress or buffered recording and wait for export + notification."""
-        if self._recording or len(self._post_frames) > 0 or (self._continuous and len(self._pre_buffer) > 0):
+        if self._recording or len(self._post_frames) > 0 or len(self._pre_buffer) > 0:
             self._finalize()
 
         if self._active_export_thread and self._active_export_thread.is_alive():
@@ -137,7 +125,6 @@ class FrameRecorder:
         self._pre_buffer.clear()
         self._post_frames = []
         self._recording = False
-        self._continuous = False
         self._last_export_time = time.monotonic()
 
         if not frames:
