@@ -75,12 +75,16 @@ export async function configure(cfg: Partial<Config>): Promise<void> {
   await sendCmd("configure", { config: cfg });
 }
 
-export async function startEngine(): Promise<void> {
-  await sendCmd("start");
+export async function startEngine(options?: { trigger_immediate?: boolean; continuous?: boolean }): Promise<void> {
+  await sendCmd("start", options || {});
 }
 
 export async function stopEngine(): Promise<void> {
   await sendCmd("stop");
+}
+
+export async function stopAndFlushEngine(): Promise<void> {
+  await sendCmd("stop_and_flush");
 }
 
 export async function startPreview(): Promise<void> {

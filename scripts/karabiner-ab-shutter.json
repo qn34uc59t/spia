@@ -1,0 +1,64 @@
+{
+  "title": "AB Shutter Remote Control for SPIA",
+  "rules": [
+    {
+      "description": "AB Shutter Remote: iOS button starts recording, Android button stops and sends video",
+      "manipulators": [
+        {
+          "type": "basic",
+          "conditions": [
+            {
+              "type": "device_if",
+              "identifiers": [
+                {
+                  "vendor_id": 1284,
+                  "product_id": 0
+                }
+              ]
+            }
+          ],
+          "from": {
+            "consumer_key_code": "volume_increment",
+            "modifiers": {
+              "optional": [
+                "any"
+              ]
+            }
+          },
+          "to": [
+            {
+              "shell_command": "/bin/bash ~/Documents/Projects/SPIA-v2/scripts/spia-control.sh start"
+            }
+          ]
+        },
+        {
+          "type": "basic",
+          "conditions": [
+            {
+              "type": "device_if",
+              "identifiers": [
+                {
+                  "vendor_id": 1284,
+                  "product_id": 0
+                }
+              ]
+            }
+          ],
+          "from": {
+            "key_code": "return_or_enter",
+            "modifiers": {
+              "optional": [
+                "any"
+              ]
+            }
+          },
+          "to": [
+            {
+              "shell_command": "/bin/bash ~/Documents/Projects/SPIA-v2/scripts/spia-control.sh stop"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

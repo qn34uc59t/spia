@@ -23,6 +23,46 @@ import detector
 import recorder
 import telegram_bot
 import discord_webhook
+import signal
+
+STOP_FILE = "/tmp/spia.stop"
+
+def perform_clean_stop():
+    log("Clean stop triggered. Flushing active/buffered recording...")
+    with state.lock:
+        state.running = False
+        state.previewing = False
+    frame_recorder.stop_and_flush(wait_timeout=30.0)
+    if os.path.exists(STOP_FILE):
+        try:
+            os.remove(STOP_FILE)
+        except OSError:
+            pass
+    emit("stopped")
+    emit("flush_done")
+    log("Clean stop complete.")
+
+def _sig_handler(signum, frame):
+    log(f"Received signal {signum}. Initiating clean shutdown...")
+    perform_clean_stop()
+    sys.exit(0)
+
+try:
+    signal.signal(signal.SIGTERM, _sig_handler)
+    signal.signal(signal.SIGINT, _sig_handler)
+except Exception as e:
+    _file_logger.warning(f"Could not register signal handlers: {e}")
+
+def _stop_file_watcher():
+    while True:
+        time.sleep(0.3)
+        if os.path.exists(STOP_FILE):
+            log(f"Stop file detected ({STOP_FILE}). Initiating clean shutdown...")
+            perform_clean_stop()
+            sys.exit(0)
+
+stop_watcher_thread = threading.Thread(target=_stop_file_watcher, daemon=True)
+stop_watcher_thread.start()
 
 sys.stdout.reconfigure(encoding="utf-8", line_buffering=True)
 sys.stdin.reconfigure(encoding="utf-8")
@@ -249,6 +289,8 @@ def handle_command(cmd_str):
             log("Configuration updated")
             
         elif action == "start":
+            trigger_immediate = cmd.get("trigger_immediate", False)
+            continuous = cmd.get("continuous", False)
             with state.lock:
                 state.running = True
                 do_cleanup = state.auto_cleanup
@@ -256,6 +298,10 @@ def handle_command(cmd_str):
             if camera_thread is None or not camera_thread.is_alive():
                 camera_thread = threading.Thread(target=motion_loop, daemon=True)
                 camera_thread.start()
+
+            if trigger_immediate:
+                frame_recorder.trigger(continuous=continuous, force=True)
+                log(f"Started recording immediately (continuous={continuous})")
                 
             # Clean up events older than 7 days
             if do_cleanup:
@@ -279,6 +325,10 @@ def handle_command(cmd_str):
             with state.lock:
                 state.running = False
             log("Disarmed system")
+
+        elif action == "stop_and_flush":
+            log("stop_and_flush action received")
+            perform_clean_stop()
             
         elif action == "status":
             with state.lock:
@@ -311,15 +361,14 @@ def main():
         try:
             line = sys.stdin.readline()
             if not line:
-                log("EOF reached. Parent process died. Exiting.")
-                with state.lock:
-                    state.running = False
-                    state.previewing = False
+                log("EOF reached. Parent process died or requested exit.")
+                perform_clean_stop()
                 break
             
             handle_command(line)
         except Exception as e:
             log(f"Fatal error reading stdin: {e}")
+            perform_clean_stop()
             break
             
     sys.exit(0)

@@ -8,7 +8,7 @@ import { isEnabled, enable, disable } from "@tauri-apps/plugin-autostart";
 // import { Command } from "@tauri-apps/plugin-shell";
 import { invoke } from "@tauri-apps/api/core";
 import {
-  initEngine, getCameras, configure, startEngine, stopEngine,
+  initEngine, getCameras, configure, startEngine, stopEngine, stopAndFlushEngine,
   startPreview, stopPreview,
   saveSecret, loadSecret, authenticateWithTouchId,
   onEngineEvent, Camera
@@ -264,7 +264,7 @@ export default function App() {
     (async () => {
       try { await initEngine(); } catch (e) { setInitErr("EngineInit: " + e); return; }
 
-      // Listen for tray events
+      // Listen for tray and remote events
       import("@tauri-apps/api/event").then(({ listen }) => {
         listen("tray_toggle_surveillance", () => {
           setRunning(prev => {
@@ -276,6 +276,15 @@ export default function App() {
             }
             return next;
           });
+        });
+
+        listen("remote_stop", async () => {
+          try {
+            await stopAndFlushEngine();
+          } catch (e) {
+            console.error("remote_stop error:", e);
+          }
+          await invoke("exit_app");
         });
       });
 
@@ -314,6 +323,36 @@ export default function App() {
       if (s.masterPassword) setMasterPassword(s.masterPassword);
 
       isEnabled().then(setAutostartEnabled).catch(console.error);
+
+      // Handle CLI autostart / remote trigger (--autostart or --record)
+      const isAuto = await invoke<boolean>("is_autostart").catch(() => false);
+      if (isAuto) {
+        const finalPath = s.savePath || "";
+        const finalToken = (await loadSecret("SPIA_App", "Bot_Token").catch(() => "")) || "";
+        const finalChat = (await loadSecret("SPIA_App", "Chat_ID").catch(() => "")) || s.tgChatId || "";
+        const finalDiscord = (await loadSecret("SPIA_App", "Discord_Webhook").catch(() => "")) || "";
+
+        if (finalPath) {
+          await configure({
+            camera_index: s.cameraIndex ?? cameraIndex,
+            save_path: finalPath,
+            sensitivity: [0.2, 0.5, 0.8][s.sensitivity ?? sensitivity],
+            cooldown: s.cooldown ?? cooldown,
+            telegram_token: finalToken,
+            telegram_chat_id: finalChat,
+            discord_webhook_url: finalDiscord,
+            zone_mask: s.zoneMask
+          });
+
+          await startEngine({ trigger_immediate: true, continuous: true });
+          setRunning(true);
+          setActiveTab("monitor");
+          invoke("set_tray_active", { active: true }).catch(console.error);
+          if (s.preventSleep) {
+            invoke("set_keep_awake", { active: true }).catch(console.error);
+          }
+        }
+      }
 
       setTimeout(() => setReady(true), 1500);
     })();

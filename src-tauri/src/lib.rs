@@ -265,8 +265,46 @@ fn set_keep_awake(state: State<KeepAwakeState>, active: bool) {
     }
 }
 
+fn check_single_instance() -> bool {
+    let pid_path = std::path::Path::new("/tmp/spia.pid");
+    if pid_path.exists() {
+        if let Ok(content) = std::fs::read_to_string(pid_path) {
+            let pid_str = content.trim();
+            if !pid_str.is_empty() {
+                let status = std::process::Command::new("kill")
+                    .args(["-0", pid_str])
+                    .output();
+                if let Ok(out) = status {
+                    if out.status.success() {
+                        eprintln!("[SPIA] Instance already running with PID {}. Exiting.", pid_str);
+                        return false;
+                    }
+                }
+            }
+        }
+    }
+    let my_pid = std::process::id();
+    let _ = std::fs::write(pid_path, my_pid.to_string());
+    true
+}
+
+#[tauri::command]
+fn is_autostart() -> bool {
+    std::env::args().any(|arg| arg == "--autostart" || arg == "--record")
+}
+
+#[tauri::command]
+fn exit_app(app: AppHandle) {
+    let _ = std::fs::remove_file("/tmp/spia.pid");
+    app.exit(0);
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    if !check_single_instance() {
+        std::process::exit(0);
+    }
+
     let engine_handle: SharedEngine = Arc::new(Mutex::new(EngineHandle::new()));
     let engine_handle_clone = engine_handle.clone();
 
@@ -290,12 +328,24 @@ pub fn run() {
                 Err(e) => eprintln!("Engine launch error: {e}"),
             }
 
-            // If launched at login, start quietly in the top bar
-            if std::env::args().any(|arg| arg == "--autostart") {
+            // If launched at login or remote autostart, start quietly in the top bar
+            if std::env::args().any(|arg| arg == "--autostart" || arg == "--record") {
                 if let Some(window) = app.get_webview_window("main") {
                     let _ = window.hide();
                 }
             }
+
+            // Watch for remote stop sentinel file
+            let app_handle_stop = app.handle().clone();
+            std::thread::spawn(move || {
+                let stop_file = std::path::Path::new("/tmp/spia.stop");
+                loop {
+                    std::thread::sleep(std::time::Duration::from_millis(400));
+                    if stop_file.exists() {
+                        let _ = app_handle_stop.emit("remote_stop", ());
+                    }
+                }
+            });
             
             // System Tray Setup
             let hide_i = MenuItem::with_id(app, "toggle_vis", "Hide/Reveal SPIA", true, None::<&str>)?;
@@ -344,6 +394,8 @@ pub fn run() {
             read_file_bytes,
             set_tray_active,
             set_keep_awake,
+            is_autostart,
+            exit_app,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
