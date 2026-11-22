@@ -27,7 +27,7 @@
           },
           "to": [
             {
-              "shell_command": "/bin/bash ~/Documents/Projects/SPIA-v2/scripts/spia-control.sh start"
+              "shell_command": "/bin/bash /Users/dgnmd/Documents/Projects/SPIA-v2/scripts/spia-control.sh start"
             }
           ]
         },
@@ -45,7 +45,7 @@
             }
           ],
           "from": {
-            "key_code": "return_or_enter",
+            "consumer_key_code": "volume_decrement",
             "modifiers": {
               "optional": [
                 "any"
@@ -54,7 +54,7 @@
           },
           "to": [
             {
-              "shell_command": "/bin/bash ~/Documents/Projects/SPIA-v2/scripts/spia-control.sh stop"
+              "shell_command": "/bin/bash /Users/dgnmd/Documents/Projects/SPIA-v2/scripts/spia-control.sh stop"
             }
           ]
         }

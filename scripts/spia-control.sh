@@ -15,10 +15,14 @@ resolve_app() {
   fi
 }
 
+is_running() {
+  pgrep -ix "spia" >/dev/null 2>&1
+}
+
 case "$1" in
   start)
     # Check if SPIA is already running (prevent double starts)
-    if pgrep -x "SPIA" >/dev/null 2>&1; then
+    if is_running; then
       echo "SPIA is already running. Ignoring start command."
       exit 0
     fi
@@ -39,7 +43,7 @@ case "$1" in
 
     # Wait up to 15 seconds for SPIA to finish export and exit cleanly
     WAITED=0
-    while pgrep -x "SPIA" >/dev/null 2>&1 && [ $WAITED -lt 15 ]; do
+    while is_running && [ $WAITED -lt 30 ]; do
       sleep 0.5
       WAITED=$((WAITED + 1))
     done
@@ -47,17 +51,25 @@ case "$1" in
     # Clean up stop file if still present
     rm -f /tmp/spia.stop /tmp/spia.pid 2>/dev/null || true
 
-    if pgrep -x "SPIA" >/dev/null 2>&1; then
+    if is_running; then
       echo "Force quitting remaining SPIA process..."
-      killall -9 SPIA 2>/dev/null || true
+      killall -9 spia 2>/dev/null || true
     else
       echo "SPIA stopped cleanly."
     fi
     ;;
 
+  toggle)
+    if is_running; then
+      "$0" stop
+    else
+      "$0" start
+    fi
+    ;;
+
   status)
-    if pgrep -x "SPIA" >/dev/null 2>&1; then
-      echo "SPIA is running (PID: $(pgrep -x SPIA))"
+    if is_running; then
+      echo "SPIA is running (PID: $(pgrep -ix spia))"
     else
       echo "SPIA is not running"
     fi
