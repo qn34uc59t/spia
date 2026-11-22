@@ -131,8 +131,8 @@ def motion_loop():
 
         for attempt in range(MAX_OPEN_ATTEMPTS):
             with state.lock:
-                if not state.previewing:
-                    log("Preview cancelled before camera opened")
+                if not state.previewing and not state.running:
+                    log("Camera loop cancelled before camera opened")
                     return
 
             if cap:
