@@ -26,6 +26,22 @@ import discord_webhook
 import signal
 
 STOP_FILE = "/tmp/spia.stop"
+AFPLAY = "/usr/bin/afplay"
+SOUNDS_DIR = "/System/Library/Sounds"
+
+def play_sound(name: str, count: int = 1, gap: float = 0.18):
+    """Play a macOS system sound non-blocking. count > 1 = rapid repeats."""
+    import subprocess
+    path = f"{SOUNDS_DIR}/{name}"
+    def _play():
+        for i in range(count):
+            try:
+                subprocess.run([AFPLAY, path], check=False, timeout=3)
+            except Exception:
+                pass
+            if i < count - 1:
+                time.sleep(gap)
+    threading.Thread(target=_play, daemon=True).start()
 
 def perform_clean_stop():
     log("Clean stop triggered. Flushing active/buffered recording...")
@@ -40,6 +56,7 @@ def perform_clean_stop():
             pass
     emit("stopped")
     emit("flush_done")
+    play_sound("Funk.aiff")       # single low thud = disarmed
     log("Clean stop complete.")
 
 def _sig_handler(signum, frame):
@@ -314,6 +331,7 @@ def handle_command(cmd_str):
                         log(f"Cleanup error: {e}")
                     
             log("Armed system")
+            play_sound("Ping.aiff", count=2)   # double-ping = armed
             
         elif action == "stop":
             with state.lock:
