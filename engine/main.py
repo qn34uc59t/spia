@@ -29,16 +29,40 @@ STOP_FILE = "/tmp/spia.stop"
 AFPLAY = "/usr/bin/afplay"
 SOUNDS_DIR = "/System/Library/Sounds"
 
+def _resolve_sound_path(name: str) -> str:
+    if os.path.isabs(name) and os.path.exists(name):
+        return name
+    base_dirs = [
+        getattr(sys, '_MEIPASS', ''),
+        os.path.dirname(os.path.abspath(__file__)),
+        os.path.dirname(sys.executable),
+    ]
+    for b in base_dirs:
+        if b:
+            p = os.path.join(b, "assets", name)
+            if os.path.exists(p):
+                return p
+            p_direct = os.path.join(b, name)
+            if os.path.exists(p_direct):
+                return p_direct
+    sys_path = os.path.join(SOUNDS_DIR, name)
+    if os.path.exists(sys_path):
+        return sys_path
+    dl_fallback = "/Users/dgnmd/Downloads/Bomb Has Been Planted CS：GO Sound Effect [cquzHly3ByA] 131 kbps 0m02s-end.m4a"
+    if os.path.exists(dl_fallback):
+        return dl_fallback
+    return name
+
 def play_sound(name: str, count: int = 1, gap: float = 0.18):
-    """Play a macOS system sound non-blocking. count > 1 = rapid repeats."""
+    """Play an audio file or macOS system sound non-blocking. count > 1 = rapid repeats."""
     import subprocess
-    path = f"{SOUNDS_DIR}/{name}"
+    path = _resolve_sound_path(name)
     def _play():
         for i in range(count):
             try:
-                subprocess.run([AFPLAY, path], check=False, timeout=3)
-            except Exception:
-                pass
+                subprocess.run([AFPLAY, path], check=False, timeout=10)
+            except Exception as e:
+                _file_logger.warning(f"Error playing sound {path}: {e}")
             if i < count - 1:
                 time.sleep(gap)
     threading.Thread(target=_play, daemon=True).start()
@@ -331,7 +355,7 @@ def handle_command(cmd_str):
                         log(f"Cleanup error: {e}")
                     
             log("Armed system")
-            play_sound("Ping.aiff", count=2)   # double-ping = armed
+            play_sound("armed.m4a")   # CS:GO "Bomb has been planted"
             
         elif action == "stop":
             with state.lock:

@@ -15,6 +15,7 @@ mkdir -p "$OUTDIR"
 pyinstaller \
   --onedir \
   --contents-directory . \
+  --add-data "$PWD/assets:assets" \
   --name "spia-engine" \
   --distpath "$OUTDIR" \
   --specpath /tmp/spia-spec \
