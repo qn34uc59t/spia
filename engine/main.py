@@ -24,6 +24,7 @@ import recorder
 import telegram_bot
 import discord_webhook
 import signal
+import subprocess
 
 STOP_FILE = "/tmp/spia.stop"
 AFPLAY = "/usr/bin/afplay"
