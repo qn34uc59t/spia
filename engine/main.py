@@ -48,10 +48,41 @@ def _resolve_sound_path(name: str) -> str:
     sys_path = os.path.join(SOUNDS_DIR, name)
     if os.path.exists(sys_path):
         return sys_path
-    dl_fallback = "/Users/dgnmd/Downloads/Bomb Has Been Planted CS：GO Sound Effect [cquzHly3ByA] 131 kbps 0m02s-end.m4a"
-    if os.path.exists(dl_fallback):
-        return dl_fallback
+    if name == "armed.m4a":
+        dl_fallback = "/Users/dgnmd/Downloads/Bomb Has Been Planted CS：GO Sound Effect [cquzHly3ByA] 131 kbps 0m02s-end.m4a"
+        if os.path.exists(dl_fallback):
+            return dl_fallback
+    elif name == "motion_alarm.m4a":
+        dl_fallback = "/Users/dgnmd/Downloads/Radio Chatter Español [pe1aCTFW0vU] 129 kbps 0m00s-0m34s.m4a"
+        if os.path.exists(dl_fallback):
+            return dl_fallback
     return name
+
+_motion_sound_proc = None
+_motion_sound_lock = threading.Lock()
+
+def play_motion_sound():
+    """Play the motion alarm sound (Spanish radio chatter) for its full duration (~35s). Avoids overlapping if already playing."""
+    global _motion_sound_proc
+    with _motion_sound_lock:
+        if _motion_sound_proc is not None and _motion_sound_proc.poll() is None:
+            return  # Already playing, let it finish the full 35 seconds
+        path = _resolve_sound_path("motion_alarm.m4a")
+        try:
+            log(f"Playing motion alarm audio: {path}")
+            _motion_sound_proc = subprocess.Popen([AFPLAY, path])
+        except Exception as e:
+            _file_logger.warning(f"Error playing motion sound {path}: {e}")
+
+def stop_motion_sound():
+    global _motion_sound_proc
+    with _motion_sound_lock:
+        if _motion_sound_proc is not None and _motion_sound_proc.poll() is None:
+            try:
+                _motion_sound_proc.terminate()
+            except Exception:
+                pass
+            _motion_sound_proc = None
 
 def play_sound(name: str, count: int = 1, gap: float = 0.18):
     """Play an audio file or macOS system sound non-blocking. count > 1 = rapid repeats."""
@@ -69,6 +100,7 @@ def play_sound(name: str, count: int = 1, gap: float = 0.18):
 
 def perform_clean_stop():
     log("Clean stop triggered. Flushing active/buffered recording...")
+    stop_motion_sound()
     with state.lock:
         state.running = False
         state.previewing = False
@@ -249,6 +281,7 @@ def motion_loop():
                 if rects:
                     if frame_recorder.trigger():
                         log("Motion triggered! Recording started.")
+                    play_motion_sound()
                     
                     # Draw green squares on the preview
                     for (rx, ry, rw, rh) in rects:
@@ -360,6 +393,7 @@ def handle_command(cmd_str):
         elif action == "stop":
             with state.lock:
                 state.running = False
+            stop_motion_sound()
             log("Disarmed system")
 
         elif action == "stop_and_flush":
